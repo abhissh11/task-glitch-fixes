@@ -9,10 +9,16 @@ import TaskDetailsDialog from '@/components/TaskDetailsDialog';
 
 interface Props {
   tasks: DerivedTask[];
-  onAdd: (payload: Omit<Task, 'id'>) => void;
-  onUpdate: (id: string, patch: Partial<Task>) => void;
+  onAdd: (
+    payload: Omit<Task, 'id' | 'createdAt' | 'completedAt'> & { id?: string }
+  ) => void;
+  onUpdate: (
+    id: string,
+    patch: Partial<Omit<Task, 'createdAt' | 'completedAt'>>
+  ) => void;
   onDelete: (id: string) => void;
 }
+
 
 export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
   const [openForm, setOpenForm] = useState(false);
@@ -30,13 +36,15 @@ export default function TaskTable({ tasks, onAdd, onUpdate, onDelete }: Props) {
     setOpenForm(true);
   };
 
-  const handleSubmit = (value: Omit<Task, 'id'> & { id?: string }) => {
-    if (value.id) {
-      const { id, ...rest } = value as Task;
-      onUpdate(id, rest);
-    } else {
-      onAdd(value as Omit<Task, 'id'>);
-    }
+  const handleSubmit = (value: Omit<Task, 'id' | 'createdAt' | 'completedAt'> & { id?: string }) => {
+   if (value.id) {
+  const { id, ...rest } =
+    value as Omit<Task, 'createdAt' | 'completedAt'> & { id: string };
+
+  onUpdate(id, rest);
+} else {
+  onAdd(value);
+}
   };
 
   return (
