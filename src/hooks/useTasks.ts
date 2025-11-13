@@ -19,8 +19,13 @@ interface UseTasksState {
   derivedSorted: DerivedTask[];
   metrics: Metrics;
   lastDeleted: Task | null;
-  addTask: (task: Omit<Task, 'id'> & { id?: string }) => void;
-  updateTask: (id: string, patch: Partial<Task>) => void;
+  addTask: (
+  task: Omit<Task, 'id' | 'createdAt' | 'completedAt'> & { id?: string }
+) => void;
+updateTask: (
+  id: string,
+  patch: Partial<Omit<Task, 'createdAt' | 'completedAt'>>
+) => void;
   deleteTask: (id: string) => void;
   undoDelete: () => void;
   clearLastDeleted: () => void;
@@ -112,31 +117,66 @@ export function useTasks(): UseTasksState {
     return { totalRevenue, totalTimeTaken, timeEfficiencyPct, revenuePerHour, averageROI, performanceGrade };
   }, [tasks]);
 
-  const addTask = useCallback((task: Omit<Task, 'id'> & { id?: string }) => {
+  const addTask = useCallback(
+  (
+    task: Omit<Task, 'id' | 'createdAt' | 'completedAt'> & { id?: string }
+  ) => {
     setTasks(prev => {
       const id = task.id ?? crypto.randomUUID();
-      const timeTaken = task.timeTaken <= 0 ? 1 : task.timeTaken; // auto-correct
+
       const createdAt = new Date().toISOString();
       const status = task.status;
-      const completedAt = status === 'Done' ? createdAt : undefined;
-      return [...prev, { ...task, id, timeTaken, createdAt, completedAt }];
-    });
-  }, []);
 
-  const updateTask = useCallback((id: string, patch: Partial<Task>) => {
+      const completedAt =
+        status === 'Done' ? createdAt : undefined;
+
+      const timeTaken = task.timeTaken <= 0 ? 1 : task.timeTaken;
+
+      return [
+        ...prev,
+        {
+          ...task,
+          id,
+          timeTaken,
+          createdAt,
+          completedAt,
+        },
+      ];
+    });
+  },
+  []
+);
+
+
+
+const updateTask = useCallback(
+  (
+    id: string,
+    patch: Partial<Omit<Task, 'createdAt' | 'completedAt'>>
+  ) => {
     setTasks(prev => {
       const next = prev.map(t => {
         if (t.id !== id) return t;
+
         const merged = { ...t, ...patch } as Task;
-        if (t.status !== 'Done' && merged.status === 'Done' && !merged.completedAt) {
+
+        if (t.status !== 'Done' && merged.status === 'Done') {
           merged.completedAt = new Date().toISOString();
         }
+
         return merged;
       });
-      // Ensure timeTaken remains > 0
-      return next.map(t => (t.id === id && (patch.timeTaken ?? t.timeTaken) <= 0 ? { ...t, timeTaken: 1 } : t));
+
+      return next.map(t =>
+        t.id === id && (patch.timeTaken ?? t.timeTaken) <= 0
+          ? { ...t, timeTaken: 1 }
+          : t
+      );
     });
-  }, []);
+  },
+  []
+);
+
 
   const deleteTask = useCallback((id: string) => {
     setTasks(prev => {
